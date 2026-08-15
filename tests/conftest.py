@@ -14,6 +14,13 @@ def clear_gateway_environment(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
+def anyio_backend() -> str:
+    """Run asynchronous tests on the application's asyncio backend."""
+
+    return "asyncio"
+
+
+@pytest.fixture
 def settings() -> Settings:
     """Return a complete configuration made only from test values."""
 

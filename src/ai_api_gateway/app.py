@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from ai_api_gateway.config import Settings
+from ai_api_gateway.database import Database
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -13,8 +14,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        app.state.settings = settings or Settings()  # type: ignore[call-arg]
-        yield
+        resolved_settings = settings or Settings()  # type: ignore[call-arg]
+        database = Database(str(resolved_settings.database_dsn))
+        app.state.settings = resolved_settings
+        app.state.database = database
+        try:
+            yield
+        finally:
+            await database.dispose()
 
     application = FastAPI(
         title="AI API Gateway",

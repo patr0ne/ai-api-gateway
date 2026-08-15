@@ -1,10 +1,10 @@
-# Assignment 8: AI API Gateway
+# AI API Gateway
 
 ## 1. Scope
 
-The selected assignment is **Assignment 8: an API gateway with rate limiting**.
-Assignment 9 is not implemented as a separate product: its Docker Compose and
-CI/CD requirements are used to package and verify the gateway.
+This project is a production-oriented API gateway with per-client rate
+limiting. Docker Compose provides the local runtime environment, while CI/CD
+automates verification of the same service.
 
 The service accepts authenticated requests, limits every client to five
 requests during a 60-second window, and forwards allowed requests to one
@@ -128,8 +128,8 @@ does not depend on in-process state. The response includes:
 
 The fixed-window approach can allow a burst immediately after a previous
 window expires. A sliding window or token bucket would smooth such bursts but
-would add data and algorithmic complexity that the assignment does not
-require.
+would add data and algorithmic complexity that the current requirements do not
+justify.
 
 ## 6. Failure handling
 
