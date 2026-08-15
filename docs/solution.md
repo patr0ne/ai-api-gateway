@@ -15,9 +15,11 @@ the upstream base URL and endpoint are controlled by server configuration.
 
 - authenticate a client by an API key;
 - keep client records in PostgreSQL;
+- manage the PostgreSQL schema with Alembic migrations;
 - enforce the limit atomically in Redis;
 - return `429 Too Many Requests` after five requests in a window;
 - proxy an allowed request to the configured AI service;
+- run the FastAPI ASGI application with Uvicorn and non-blocking I/O clients;
 - run the application, PostgreSQL, and Redis through Docker Compose;
 - run formatting, linting, and tests in CI;
 - never store or log plaintext API keys or upstream credentials.
@@ -47,7 +49,14 @@ provider from retry storms and keeps the algorithm simple and deterministic.
 
 The HTTP layer owns request validation, dependency wiring, error mapping, and
 response headers. Configuration is loaded from environment variables and
-validated when the application starts.
+validated when the application starts. FastAPI provides the ASGI application,
+and Uvicorn runs it as the HTTP server.
+
+Request handlers and all external I/O are asynchronous. PostgreSQL access uses
+SQLAlchemy 2 asynchronous sessions with `asyncpg`; Redis uses its asynchronous
+client; upstream calls use one shared `httpx.AsyncClient`. These clients and
+their connection pools are created during the application lifespan and closed
+on shutdown instead of being recreated for every request.
 
 ### PostgreSQL
 
@@ -64,6 +73,12 @@ API keys are generated as high-entropy random values. The stored fingerprint
 is `HMAC-SHA256(secret_pepper, api_key)`. This allows indexed lookup while the
 plaintext key remains unrecoverable without both the original key and the
 server-side pepper. The raw key must only be shown once when it is created.
+
+Alembic is the only mechanism used to create or change the PostgreSQL schema.
+Migration revisions are stored in the repository and must have a single head.
+The application does not call `create_all()` at runtime. An explicit
+`alembic upgrade head` step must succeed before Uvicorn starts accepting
+requests.
 
 ### Redis
 
@@ -135,29 +150,40 @@ request and response bodies.
 
 ## 7. Docker and CI
 
-Docker Compose will start three services:
+Docker Compose will provide these services:
 
 - `app`: the FastAPI gateway;
+- `migrate`: a one-shot Alembic migration using the application image;
 - `postgres`: persistent client storage with a health check;
 - `redis`: rate-limit storage with a health check.
 
-The application starts only after its dependencies are healthy and database
-migrations have completed. Secrets are supplied through environment variables;
-the repository contains only an `.env.example` with non-secret placeholders.
+PostgreSQL and Redis must become healthy before the migration step runs. The
+application starts only after the migration exits successfully. The container
+runs Uvicorn without development reload and binds to `0.0.0.0`. Secrets are
+supplied through environment variables; the repository contains only an
+`.env.example` with non-secret placeholders.
 
 GitHub Actions will install the project and run the same commands used locally:
 
 1. formatting check;
 2. linting;
 3. type checking;
-4. unit and integration tests.
+4. Alembic single-head and clean-database upgrade checks;
+5. unit and asynchronous integration tests;
+6. Docker image build and Docker Compose configuration validation.
+
+The CI integration job starts real PostgreSQL and Redis services. It upgrades
+an empty database to the current Alembic head before running database and
+rate-limiter tests, so a unit-only pass cannot hide a broken migration or
+driver configuration.
 
 ## 8. Test strategy
 
 Unit tests cover configuration validation, API-key fingerprinting, rate-limit
 decisions, header calculation, and upstream error mapping. Integration tests
-cover PostgreSQL client lookup, the real Redis Lua script, and the complete
-FastAPI request flow with a mocked upstream service.
+cover PostgreSQL client lookup through the asynchronous session layer, the real
+Redis Lua script through the asynchronous client, and the complete ASGI request
+flow with a mocked upstream service.
 
 Important boundary cases are:
 
@@ -175,17 +201,19 @@ The work is intentionally split into reviewable commits:
 
 1. document architecture and rate-limiting decisions;
 2. add application configuration and health endpoint;
-3. add PostgreSQL model, migration, and API-key authentication;
+3. add SQLAlchemy async access, Alembic migration, and API-key authentication;
 4. add the atomic Redis rate limiter;
 5. add safe upstream proxying and HTTP error mapping;
-6. add Docker image and Docker Compose environment;
-7. add the complete test suite and GitHub Actions workflow;
-8. finish operational documentation and usage examples.
+6. complete unit and integration coverage for the implemented behavior;
+7. add the Docker image and Docker Compose environment for the migration step,
+   application, PostgreSQL, and Redis;
+8. add CI checks and finish operational documentation and usage examples.
 
 ## 10. Acceptance criteria
 
-The implementation is complete when a clean checkout can be started through
-Docker Compose, a valid client can make exactly five requests within a window,
-the sixth request returns `429`, another client has an independent counter,
-and all local and CI checks pass.
+The implementation is complete when Alembic can upgrade an empty database to
+the current single head, a clean checkout can be started through Docker
+Compose, Uvicorn serves the ASGI application, a valid client can make exactly
+five requests within a window, the sixth request returns `429`, another client
+has an independent counter, and all local and CI checks pass.
 
