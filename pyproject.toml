@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-api-gateway"
+version = "0.1.0"
+description = "Production-oriented API gateway with distributed rate limiting"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Artem Yalilov" },
+]
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_api_gateway"]
+
