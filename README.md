@@ -47,9 +47,9 @@ The PostgreSQL schema is managed only through Alembic. With
 ```
 
 The current implementation includes application configuration, the health
-endpoint, the `api_clients` schema, and the reusable API-key authentication
-dependency. Redis rate limiting and the protected proxy endpoint are added in
-the following implementation stages.
+endpoint, the `api_clients` schema, API-key authentication, and an atomic Redis
+fixed-window rate limiter. The protected upstream proxy endpoint is added in
+the following implementation stage.
 
 ## License
 
