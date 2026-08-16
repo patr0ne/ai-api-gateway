@@ -47,6 +47,14 @@ class RateLimitDecision:
         return headers
 
 
+@dataclass(frozen=True, slots=True)
+class RateLimitGrant:
+    """An authenticated client and the rate-limit decision for its request."""
+
+    client: ApiClient
+    decision: RateLimitDecision
+
+
 class RateLimiter:
     """Apply the shared fixed-window algorithm through one Redis client."""
 
@@ -81,7 +89,7 @@ async def enforce_rate_limit(
     request: Request,
     response: Response,
     client: Annotated[ApiClient, Depends(require_api_client)],
-) -> ApiClient:
+) -> RateLimitGrant:
     """Authenticate a client, consume one attempt, and expose limit headers."""
 
     limiter: RateLimiter = request.app.state.rate_limiter
@@ -101,4 +109,4 @@ async def enforce_rate_limit(
         )
 
     response.headers.update(decision.headers())
-    return client
+    return RateLimitGrant(client=client, decision=decision)
