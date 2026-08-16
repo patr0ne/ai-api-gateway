@@ -1,7 +1,8 @@
 """Atomic Redis-backed per-client rate limiting."""
 
+from collections.abc import Awaitable
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, cast
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, Response, status
@@ -64,11 +65,14 @@ class RateLimiter:
     async def check(self, client_id: UUID) -> RateLimitDecision:
         key = f"rate_limit:{client_id}"
         try:
-            result = await self._redis.eval(
-                _FIXED_WINDOW_SCRIPT,
-                1,
-                key,
-                RATE_LIMIT_WINDOW_SECONDS,
+            result = await cast(
+                Awaitable[list[int]],
+                self._redis.eval(
+                    _FIXED_WINDOW_SCRIPT,
+                    1,
+                    key,
+                    RATE_LIMIT_WINDOW_SECONDS,
+                ),
             )
             current, ttl = (int(value) for value in result)
         except (RedisError, TypeError, ValueError) as exc:

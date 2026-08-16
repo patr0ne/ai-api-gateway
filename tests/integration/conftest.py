@@ -1,7 +1,8 @@
 """Safe fixtures for tests against disposable PostgreSQL and Redis services."""
 
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable
+from typing import cast
 from urllib.parse import urlparse
 
 import pytest
@@ -62,7 +63,7 @@ async def database(test_postgres_dsn: str) -> AsyncIterator[Database]:
 async def redis_client(test_redis_url: str) -> AsyncIterator[Redis]:
     redis = Redis.from_url(test_redis_url, decode_responses=True)
     try:
-        await redis.ping()
+        await cast(Awaitable[bool], redis.ping())
         await redis.flushdb()
         yield redis
     finally:
