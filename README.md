@@ -53,6 +53,21 @@ requests are forwarded only to the configured provider's `generate` endpoint;
 provider timeouts and transport failures are returned as controlled gateway
 errors.
 
+## Tests
+
+The default suite runs unit and mocked-transport tests. Live integration tests
+are skipped unless both `TEST_POSTGRES_DSN` and `TEST_REDIS_URL` are supplied.
+The PostgreSQL database name must end with `_test`, and the Redis URL must use
+a non-zero database because integration fixtures clear their isolated state.
+
+Apply the Alembic migration to the disposable database, then run:
+
+```bash
+TEST_POSTGRES_DSN=postgresql://gateway:password@localhost:5432/gateway_test \
+TEST_REDIS_URL=redis://localhost:6379/15 \
+.venv/bin/python -m pytest -q
+```
+
 ## License
 
 This project is distributed under the MIT License. See [LICENSE](LICENSE).

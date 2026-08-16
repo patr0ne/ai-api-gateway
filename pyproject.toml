@@ -36,6 +36,9 @@ packages = ["src/ai_api_gateway"]
 addopts = "-ra"
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+  "integration: requires disposable PostgreSQL and Redis test services",
+]
 
 [tool.ruff]
 line-length = 88
