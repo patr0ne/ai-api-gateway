@@ -48,8 +48,10 @@ The PostgreSQL schema is managed only through Alembic. With
 
 The current implementation includes application configuration, the health
 endpoint, the `api_clients` schema, API-key authentication, and an atomic Redis
-fixed-window rate limiter. The protected upstream proxy endpoint is added in
-the following implementation stage.
+fixed-window rate limiter. Authenticated and allowed `POST /v1/generate`
+requests are forwarded only to the configured provider's `generate` endpoint;
+provider timeouts and transport failures are returned as controlled gateway
+errors.
 
 ## License
 

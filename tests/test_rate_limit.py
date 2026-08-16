@@ -19,6 +19,7 @@ from ai_api_gateway.rate_limit import (
     RateLimitDecision,
     RateLimiter,
     RateLimiterUnavailableError,
+    RateLimitGrant,
     enforce_rate_limit,
 )
 
@@ -98,9 +99,9 @@ def _protected_client(
 
     @application.get("/protected-test")
     async def protected_test(
-        client: ApiClient = Depends(enforce_rate_limit),
+        grant: RateLimitGrant = Depends(enforce_rate_limit),
     ) -> dict[str, str]:
-        return {"client": client.name}
+        return {"client": grant.client.name}
 
     limiter = AsyncMock(spec=RateLimiter)
     if isinstance(decision, Exception):
