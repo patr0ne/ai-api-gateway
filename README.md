@@ -33,11 +33,33 @@ Requests above the limit receive `429 Too Many Requests`.
 Application code will be developed in a dedicated feature branch and merged
 into `main` through explicit, reviewable commits.
 
-## Local configuration
+## Docker Compose
 
-Copy `.env.example` to `.env` and replace every placeholder before starting
-the application. Plain `postgresql://` database URLs are accepted and are
-normalized to SQLAlchemy's asynchronous `postgresql+asyncpg://` driver.
+Copy `.env.example` to `.env` and replace every placeholder. Use a URL-safe
+PostgreSQL password because Compose includes it in the application's database
+URL. Then build and start the complete local environment:
+
+```bash
+docker compose up --build --wait
+```
+
+Compose starts healthy PostgreSQL and Redis services, runs `alembic upgrade
+head` in a one-shot `migrate` container, and only then starts the gateway. The
+gateway is available at `http://127.0.0.1:8000` by default; change
+`GATEWAY_PORT` to use another host port. PostgreSQL data is stored in the named
+`postgres-data` volume. Redis counters are intentionally ephemeral.
+
+Stop the environment without deleting PostgreSQL data:
+
+```bash
+docker compose down
+```
+
+Add `--volumes` only when the PostgreSQL data should also be removed.
+
+For a direct host-based run, provide all `GATEWAY_` settings yourself. Plain
+`postgresql://` database URLs are accepted and normalized to SQLAlchemy's
+asynchronous `postgresql+asyncpg://` driver.
 
 The PostgreSQL schema is managed only through Alembic. With
 `GATEWAY_DATABASE_DSN` configured, apply the current single migration head:
