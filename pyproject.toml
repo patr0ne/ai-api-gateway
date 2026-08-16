@@ -12,8 +12,34 @@ license = { file = "LICENSE" }
 authors = [
   { name = "Artem Yalilov" },
 ]
-dependencies = []
+dependencies = [
+  "alembic>=1.18,<2",
+  "asyncpg>=0.31,<1",
+  "fastapi>=0.135,<1",
+  "pydantic-settings>=2.13,<3",
+  "redis>=7.3,<8",
+  "sqlalchemy[asyncio]>=2.0.49,<3",
+  "uvicorn[standard]>=0.41,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=9,<10",
+  "ruff>=0.15,<1",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_api_gateway"]
 
+[tool.pytest.ini_options]
+addopts = "-ra"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
