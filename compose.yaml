@@ -1,0 +1,104 @@
+name: ai-api-gateway
+
+x-gateway-image: &gateway-image ai-api-gateway:local
+
+x-database-environment: &database-environment
+  GATEWAY_DATABASE_DSN: >-
+    postgresql://${POSTGRES_USER:-gateway}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-gateway}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gateway}
+      POSTGRES_USER: ${POSTGRES_USER:-gateway}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  migrate:
+    image: *gateway-image
+    pull_policy: never
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      <<: *database-environment
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runtime
+    image: *gateway-image
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      <<: *database-environment
+      GATEWAY_REDIS_URL: redis://redis:6379/0
+      GATEWAY_API_KEY_FINGERPRINT_PEPPER: ${GATEWAY_API_KEY_FINGERPRINT_PEPPER:?GATEWAY_API_KEY_FINGERPRINT_PEPPER must be set}
+      GATEWAY_UPSTREAM_BASE_URL: ${GATEWAY_UPSTREAM_BASE_URL:?GATEWAY_UPSTREAM_BASE_URL must be set}
+      GATEWAY_UPSTREAM_API_KEY: ${GATEWAY_UPSTREAM_API_KEY:?GATEWAY_UPSTREAM_API_KEY must be set}
+      GATEWAY_UPSTREAM_TIMEOUT_SECONDS: ${GATEWAY_UPSTREAM_TIMEOUT_SECONDS:-10}
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:

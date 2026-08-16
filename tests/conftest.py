@@ -30,5 +30,5 @@ def settings() -> Settings:
         api_key_fingerprint_pepper="x" * 32,
         upstream_base_url="https://provider.invalid/v1/",
         upstream_api_key="x" * 16,
-        _env_file=None,
+        _env_file=None,  # pyright: ignore[reportCallIssue]
     )

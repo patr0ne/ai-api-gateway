@@ -25,6 +25,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "black>=25.1,<27",
+  "flake8>=7.1,<8",
+  "pyright>=1.1.400,<2",
   "pytest>=9,<10",
   "ruff>=0.15,<1",
 ]
@@ -39,6 +42,15 @@ testpaths = ["tests"]
 markers = [
   "integration: requires disposable PostgreSQL and Redis test services",
 ]
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+
+[tool.pyright]
+include = ["src", "tests", "migrations"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
 
 [tool.ruff]
 line-length = 88

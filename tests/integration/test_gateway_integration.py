@@ -57,7 +57,7 @@ async def test_complete_gateway_flow_enforces_auth_and_real_redis_limit(
         api_key_fingerprint_pepper=TEST_PEPPER,
         upstream_base_url="https://provider.invalid/v1/",
         upstream_api_key="integration-provider-key",
-        _env_file=None,
+        _env_file=None,  # pyright: ignore[reportCallIssue]
     )
     application = create_app(settings)
     upstream = AsyncMock(spec=UpstreamClient)

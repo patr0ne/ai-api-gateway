@@ -39,5 +39,5 @@ def test_settings_reject_short_fingerprint_pepper(settings: Settings) -> None:
         Settings(
             **settings.model_dump(exclude={"api_key_fingerprint_pepper"}),
             api_key_fingerprint_pepper="too-short",
-            _env_file=None,
+            _env_file=None,  # pyright: ignore[reportCallIssue]
         )
